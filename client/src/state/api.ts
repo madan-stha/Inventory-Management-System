@@ -40,7 +40,7 @@ export interface DashboardMetrics {
   salesSummary: SalesSummary[];
   purchaseSummary: PurchaseSummary[];
   expenseSummary: ExpenseSummary[];
-  expenseCategorySummary: ExpenseByCategorySummary[];
+  expenseByCategorySummary: ExpenseByCategorySummary[];
 }
 
 export const api = createApi({
