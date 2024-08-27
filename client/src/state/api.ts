@@ -3,14 +3,14 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export interface Product {
   productId: string;
   name: string;
-  price: string;
+  price: number;
   rating?: number;
   stockQuantity: number;
 }
 
 export interface NewProduct {
   name: string;
-  price: string;
+  price: number;
   rating?: number;
   stockQuantity: number;
 }

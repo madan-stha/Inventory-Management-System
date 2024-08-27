@@ -1,9 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useGetProductsQuery } from "@/state/api";
+import { useCreateProductMutation, useGetProductsQuery } from "@/state/api";
 import { PlusCircleIcon, Search } from "lucide-react";
 import Header from "@/app/(components)/Header";
+import Rating from "@/app/(components)/Rating";
+import CreateProductModal from "./CreateProductModal";
+
+type ProductFormData = {
+  name: string;
+  price: number;
+  stockQuantity: number;
+  rating: number;
+};
 
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -14,6 +23,11 @@ const Products = () => {
     isLoading,
     isError,
   } = useGetProductsQuery(searchTerm);
+
+  const [createProduct] = useCreateProductMutation();
+  const handleCreateProduct = async (productData: ProductFormData) => {
+    await createProduct(productData);
+  };
 
   if (isLoading) {
     return <div className="py-4">Loading...</div>;
@@ -59,12 +73,36 @@ const Products = () => {
           <div className="">Loading</div>
         ) : (
           products?.map((product) => (
-            <div className="" key={product.productId}>
-              {product.productId}
+            <div
+              className="border shadow rounded-md p-4 max-w-full w-full mx-auto"
+              key={product.productId}
+            >
+              <div className="flex flex-col items-center">
+                img
+                <h3 className="text-lg text-gray-900 font-semibold">
+                  {product.name}
+                </h3>
+                <p className="text-gray-800">${product.price.toFixed(2)}</p>
+                <div className="text-sm text-gray-600 mt-1">
+                  Stock: {product.stockQuantity}
+                </div>
+                {product.rating && (
+                  <div className="flex items-center mt-2">
+                    <Rating rating={product.rating} />
+                  </div>
+                )}
+              </div>
             </div>
           ))
         )}
       </div>
+
+      {/* MODAL */}
+      <CreateProductModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onCreate={handleCreateProduct}
+      />
     </div>
   );
 };
