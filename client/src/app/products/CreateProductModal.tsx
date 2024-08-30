@@ -56,7 +56,8 @@ const CreateProductModal = ({
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-20">
       <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
         <Header name="Create New Product" />
-        <form action="" onSubmit={handleSubmit}>
+        <form action="" onSubmit={handleSubmit} className="mt-5">
+          {/* PRODUCT NAME */}
           <label htmlFor="productName" className={lableCssStyles}>
             Product Name
           </label>
@@ -69,6 +70,64 @@ const CreateProductModal = ({
             className={inputCssStyles}
             required
           />
+
+          {/* PRODUCT PRICE */}
+          <label htmlFor="productPrice" className={lableCssStyles}>
+            Product Price
+          </label>
+          <input
+            type="number"
+            name="price"
+            placeholder="Price"
+            onChange={handleChange}
+            value={formData.price}
+            className={inputCssStyles}
+            required
+          />
+
+          {/* PRODUCT STOCK QUANTITY */}
+          <label htmlFor="stockQuantity" className={lableCssStyles}>
+            Stock Quantity
+          </label>
+          <input
+            type="number"
+            name="stockQuantity"
+            placeholder="Stock Quantity"
+            onChange={handleChange}
+            value={formData.stockQuantity}
+            className={inputCssStyles}
+            required
+          />
+
+          {/* RATING */}
+          <label htmlFor="rating" className={lableCssStyles}>
+            Rating
+          </label>
+          <input
+            type="text"
+            name="rating"
+            placeholder="Rating"
+            onChange={handleChange}
+            value={formData.rating}
+            className={inputCssStyles}
+            required
+          />
+
+          {/* CREATE ACTIONS */}
+          <button
+            type="submit"
+            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
+          >
+            Create
+          </button>
+
+          <button
+            onClick={onClose}
+            type="button"
+            className="ml-2 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-700"
+          >
+            Cancel
+          </button>
         </form>
       </div>
     </div>
