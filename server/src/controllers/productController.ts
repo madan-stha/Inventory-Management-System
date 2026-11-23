@@ -1,42 +1,29 @@
-import { PrismaClient } from "@prisma/client";
-import { Request, Response } from "express";
+import { randomUUID } from "crypto";
+import type { CreateProductInput, ProductQuery } from "@inventory/shared";
+import { prisma } from "../lib/prisma";
+import { asyncHandler } from "../lib/asyncHandler";
 
-const prisma = new PrismaClient();
+// Request data below has already been checked by the validate() middleware.
 
-export const getProducts = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const search = req.query.search?.toString();
-    const products = await prisma.products.findMany({
-      where: {
-        name: { contains: search },
-      },
-    });
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: "Error retrieving products" });
-  }
-};
+export const getProducts = asyncHandler(async (req, res) => {
+  const { search } = req.query as ProductQuery;
+  const products = await prisma.products.findMany({
+    where: search ? { name: { contains: search } } : undefined,
+  });
+  res.json(products);
+});
 
-export const createProduct = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const { productId, name, price, rating, stockQuantity } = req.body;
-    const product = await prisma.products.create({
-      data: {
-        productId,
-        name,
-        price,
-        rating,
-        stockQuantity,
-      },
-    });
-    res.status(200).json(product);
-  } catch (error) {
-    res.status(500).json({ message: "Error creating product" });
-  }
-};
+export const createProduct = asyncHandler(async (req, res) => {
+  const { productId, name, price, rating, stockQuantity } =
+    req.body as CreateProductInput;
+  const product = await prisma.products.create({
+    data: {
+      productId: productId ?? randomUUID(),
+      name,
+      price,
+      rating,
+      stockQuantity,
+    },
+  });
+  res.status(201).json(product);
+});

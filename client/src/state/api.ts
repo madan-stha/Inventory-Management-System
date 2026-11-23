@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import type { CreateProductInput } from "@inventory/shared";
 
 export interface Product {
   productId: string;
@@ -8,12 +9,7 @@ export interface Product {
   stockQuantity: number;
 }
 
-export interface NewProduct {
-  name: string;
-  price: number;
-  rating?: number;
-  stockQuantity: number;
-}
+export type NewProduct = CreateProductInput;
 
 export interface SalesSummary {
   salesSummaryId: string;
