@@ -1,18 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useCreateProductMutation, useGetProductsQuery } from "@/state/api";
+import {
+  NewProduct,
+  useCreateProductMutation,
+  useGetProductsQuery,
+} from "@/state/api";
 import { PlusCircleIcon, Search } from "lucide-react";
 import Header from "@/app/(components)/Header";
 import Rating from "@/app/(components)/Rating";
 import CreateProductModal from "./CreateProductModal";
-
-type ProductFormData = {
-  name: string;
-  price: number;
-  stockQuantity: number;
-  rating: number;
-};
 
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,8 +22,9 @@ const Products = () => {
   } = useGetProductsQuery(searchTerm);
 
   const [createProduct] = useCreateProductMutation();
-  const handleCreateProduct = async (productData: ProductFormData) => {
-    await createProduct(productData);
+  // unwrap() rethrows API errors so the modal can show them.
+  const handleCreateProduct = async (productData: NewProduct) => {
+    await createProduct(productData).unwrap();
   };
 
   if (isLoading) {

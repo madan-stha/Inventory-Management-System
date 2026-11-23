@@ -1,18 +1,47 @@
 import React, { ChangeEvent, FormEvent, useState } from "react";
-import { v4 } from "uuid";
+import {
+  createProductSchema,
+  toFieldErrors,
+  type CreateProductInput,
+  type FieldErrors,
+} from "@inventory/shared";
 import Header from "@/app/(components)/Header";
-
-type ProductFormData = {
-  name: string;
-  price: number;
-  stockQuantity: number;
-  rating: number;
-};
 
 type CreateProductModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (formData: ProductFormData) => void;
+  onCreate: (formData: CreateProductInput) => Promise<void>;
+};
+
+// Inputs hold raw strings, converted to numbers only on submit, so an empty
+// field shows a validation message instead of silently becoming NaN or 0.
+type FormValues = {
+  name: string;
+  price: string;
+  stockQuantity: string;
+  rating: string;
+};
+
+const emptyForm: FormValues = {
+  name: "",
+  price: "",
+  stockQuantity: "",
+  rating: "",
+};
+
+const toNumber = (value: string) => (value.trim() === "" ? NaN : Number(value));
+
+// Pull the server's { message, details.fieldErrors } out of an RTK Query error.
+const readApiError = (
+  error: unknown
+): { message: string; fieldErrors: FieldErrors } => {
+  const data = (error as { data?: unknown })?.data as
+    | { message?: string; details?: { fieldErrors?: FieldErrors } }
+    | undefined;
+  return {
+    message: data?.message ?? "Could not create product. Please try again.",
+    fieldErrors: data?.details?.fieldErrors ?? {},
+  };
 };
 
 const CreateProductModal = ({
@@ -20,114 +49,169 @@ const CreateProductModal = ({
   onClose,
   onCreate,
 }: CreateProductModalProps) => {
-  const [formData, setFormData] = useState({
-    productId: v4(),
-    name: "",
-    price: 0,
-    stockQuantity: 0,
-    rating: 0,
-  });
+  const [formData, setFormData] = useState<FormValues>(emptyForm);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]:
-        name === "price" || name === "stockQuantity" || name === "rating"
-          ? parseFloat(value)
-          : value,
-    });
+    setFormData({ ...formData, [name]: value });
+    if (fieldErrors[name]) {
+      const { [name]: _cleared, ...rest } = fieldErrors;
+      setFieldErrors(rest);
+    }
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    onCreate(formData);
+  const handleClose = () => {
+    setFormData(emptyForm);
+    setFieldErrors({});
+    setFormError(null);
     onClose();
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setFormError(null);
+
+    const parsed = createProductSchema.safeParse({
+      name: formData.name,
+      price: toNumber(formData.price),
+      stockQuantity: toNumber(formData.stockQuantity),
+      rating:
+        formData.rating.trim() === "" ? undefined : toNumber(formData.rating),
+    });
+    if (!parsed.success) {
+      setFieldErrors(toFieldErrors(parsed.error.issues));
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onCreate(parsed.data);
+      handleClose();
+    } catch (error) {
+      const apiError = readApiError(error);
+      setFieldErrors(apiError.fieldErrors);
+      setFormError(apiError.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
 
-  const inputCssStyles =
-    "block w-full mb-2 p-2 border-gray-500 border-2 rounded-md";
+  const inputCssStyles = (field: keyof FormValues) =>
+    `block w-full p-2 border-2 rounded-md ${
+      fieldErrors[field] ? "border-red-500" : "border-gray-500"
+    }`;
 
-  const lableCssStyles = "block text-sm font-medium text-gray-700";
+  const labelCssStyles = "block text-sm font-medium text-gray-700";
+
+  const fieldError = (field: keyof FormValues) =>
+    fieldErrors[field] ? (
+      <p id={`${field}-error`} className="mt-1 text-sm text-red-600">
+        {fieldErrors[field][0]}
+      </p>
+    ) : null;
+
+  const fieldProps = (field: keyof FormValues) => ({
+    id: field,
+    name: field,
+    value: formData[field],
+    onChange: handleChange,
+    className: inputCssStyles(field),
+    "aria-invalid": Boolean(fieldErrors[field]),
+    "aria-describedby": fieldErrors[field] ? `${field}-error` : undefined,
+  });
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-20">
       <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
         <Header name="Create New Product" />
-        <form action="" onSubmit={handleSubmit} className="mt-5">
+        <form onSubmit={handleSubmit} className="mt-5 space-y-3" noValidate>
+          {formError && (
+            <div
+              role="alert"
+              className="p-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-md"
+            >
+              {formError}
+            </div>
+          )}
+
           {/* PRODUCT NAME */}
-          <label htmlFor="productName" className={lableCssStyles}>
-            Product Name
-          </label>
-          <input
-            type="text"
-            name="name"
-            placeholder="Name"
-            onChange={handleChange}
-            value={formData.name}
-            className={inputCssStyles}
-            required
-          />
+          <div>
+            <label htmlFor="name" className={labelCssStyles}>
+              Product Name
+            </label>
+            <input type="text" placeholder="Name" {...fieldProps("name")} />
+            {fieldError("name")}
+          </div>
 
           {/* PRODUCT PRICE */}
-          <label htmlFor="productPrice" className={lableCssStyles}>
-            Product Price
-          </label>
-          <input
-            type="number"
-            name="price"
-            placeholder="Price"
-            onChange={handleChange}
-            value={formData.price}
-            className={inputCssStyles}
-            required
-          />
+          <div>
+            <label htmlFor="price" className={labelCssStyles}>
+              Product Price
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Price"
+              {...fieldProps("price")}
+            />
+            {fieldError("price")}
+          </div>
 
           {/* PRODUCT STOCK QUANTITY */}
-          <label htmlFor="stockQuantity" className={lableCssStyles}>
-            Stock Quantity
-          </label>
-          <input
-            type="number"
-            name="stockQuantity"
-            placeholder="Stock Quantity"
-            onChange={handleChange}
-            value={formData.stockQuantity}
-            className={inputCssStyles}
-            required
-          />
+          <div>
+            <label htmlFor="stockQuantity" className={labelCssStyles}>
+              Stock Quantity
+            </label>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              placeholder="Stock Quantity"
+              {...fieldProps("stockQuantity")}
+            />
+            {fieldError("stockQuantity")}
+          </div>
 
           {/* RATING */}
-          <label htmlFor="rating" className={lableCssStyles}>
-            Rating
-          </label>
-          <input
-            type="text"
-            name="rating"
-            placeholder="Rating"
-            onChange={handleChange}
-            value={formData.rating}
-            className={inputCssStyles}
-            required
-          />
+          <div>
+            <label htmlFor="rating" className={labelCssStyles}>
+              Rating (optional, 0–5)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              max="5"
+              placeholder="Rating"
+              {...fieldProps("rating")}
+            />
+            {fieldError("rating")}
+          </div>
 
           {/* CREATE ACTIONS */}
-          <button
-            type="submit"
-            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
-          >
-            Create
-          </button>
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isSubmitting ? "Creating..." : "Create"}
+            </button>
 
-          <button
-            onClick={onClose}
-            type="button"
-            className="ml-2 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-700"
-          >
-            Cancel
-          </button>
+            <button
+              onClick={handleClose}
+              type="button"
+              className="ml-2 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       </div>
     </div>

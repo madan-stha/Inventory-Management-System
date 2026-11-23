@@ -1,0 +1,13 @@
+{
+  "name": "inventory",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w @inventory/shared",
+    "postinstall": "npm run build:shared"
+  }
+}
